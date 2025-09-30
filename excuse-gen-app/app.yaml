@@ -1,0 +1,16 @@
+command: [
+  "uvicorn",
+  "src.app:app",
+  "--host", "0.0.0.0",
+  "--port", "8000"
+]
+
+env:
+  - name: 'DATABRICKS_API_TOKEN'
+    valueFrom: databricks_token  # References App secret
+  - name: 'DATABRICKS_ENDPOINT_URL'
+    value: "https://dbc-32cf6ae7-cf82.staging.cloud.databricks.com/serving-endpoints/databricks-gpt-oss-120b/invocations"
+  - name: 'PORT'
+    value: "8000"
+  - name: 'HOST'
+    value: "0.0.0.0"

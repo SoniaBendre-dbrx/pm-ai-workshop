@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excuse Email Draft Tool</title>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom styles */
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [formData, setFormData] = React.useState({
+                category: 'Running Late',
+                tone: 'Sincere',
+                seriousness: 3,
+                recipient_name: '',
+                sender_name: '',
+                eta_when: ''
+            });
+
+            const [loading, setLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+            const [response, setResponse] = React.useState(null);
+            const [copySuccess, setCopySuccess] = React.useState(false);
+
+            const categories = [
+                'Running Late',
+                'Missed Meeting',
+                'Deadline',
+                'WFH/OOO',
+                'Social',
+                'Travel'
+            ];
+
+            const tones = ['Sincere', 'Playful', 'Corporate'];
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value
+                }));
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                setResponse(null);
+                setCopySuccess(false);
+
+                try {
+                    const response = await fetch('/api/generate-excuse', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Failed to generate excuse');
+                    }
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to generate excuse');
+                    }
+
+                    setResponse(data);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleClear = () => {
+                setFormData({
+                    category: 'Running Late',
+                    tone: 'Sincere',
+                    seriousness: 3,
+                    recipient_name: '',
+                    sender_name: '',
+                    eta_when: ''
+                });
+                setResponse(null);
+                setError(null);
+                setCopySuccess(false);
+            };
+
+            const copyToClipboard = async () => {
+                if (!response) return;
+
+                const textToCopy = `Subject: ${response.subject}\n\n${response.body}`;
+
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                } catch (err) {
+                    setError('Failed to copy to clipboard');
+                }
+            };
+
+            return (
+                <div className="container mx-auto px-4 py-8">
+                    {/* Header */}
+                    <header className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                            Excuse Email Draft Tool
+                        </h1>
+                        <p className="text-gray-600">
+                            Powered by Databricks Model Serving LLM
+                        </p>
+                    </header>
+
+                    {/* Main Content */}
+                    <div className="grid md:grid-cols-2 gap-8">
+                        {/* Form Card */}
+                        <div className="bg-white rounded-lg shadow-lg p-6">
+                            <form onSubmit={handleSubmit}>
+                                {/* Category Dropdown */}
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Category
+                                    </label>
+                                    <select
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Tone Dropdown */}
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Tone
+                                    </label>
+                                    <select
+                                        name="tone"
+                                        value={formData.tone}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {tones.map(tone => (
+                                            <option key={tone} value={tone}>{tone}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Seriousness Slider */}
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Seriousness Level: {formData.seriousness}
+                                    </label>
+                                    <input
+                                        type="range"
+                                        name="seriousness"
+                                        min="1"
+                                        max="5"
+                                        value={formData.seriousness}
+                                        onChange={handleInputChange}
+                                        className="w-full"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>Very Silly</span>
+                                        <span>Serious</span>
+                                    </div>
+                                </div>
+
+                                {/* Text Inputs */}
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Recipient Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="recipient_name"
+                                        value={formData.recipient_name}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Enter recipient's name"
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Sender Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="sender_name"
+                                        value={formData.sender_name}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        ETA/When
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="eta_when"
+                                        value={formData.eta_when}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="e.g., 15 minutes, tomorrow, next week"
+                                    />
+                                </div>
+
+                                {/* Buttons */}
+                                <div className="flex space-x-4">
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50"
+                                    >
+                                        {loading ? (
+                                            <div className="loading-spinner mx-auto"></div>
+                                        ) : (
+                                            'Generate'
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleClear}
+                                        className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Output Card */}
+                        <div className="bg-white rounded-lg shadow-lg p-6">
+                            {error ? (
+                                <div className="text-red-500 mb-4">
+                                    Error: {error}
+                                </div>
+                            ) : loading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="loading-spinner"></div>
+                                </div>
+                            ) : response ? (
+                                <div>
+                                    <div className="mb-4">
+                                        <h3 className="font-bold text-lg mb-2">
+                                            {response.subject}
+                                        </h3>
+                                        <div className="whitespace-pre-wrap text-gray-700">
+                                            {response.body}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={copyToClipboard}
+                                        className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
+                                            copySuccess
+                                                ? 'bg-green-500 text-white'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        {copySuccess ? 'Copied!' : 'Copy to Clipboard'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-gray-500 text-center h-full flex items-center justify-center">
+                                    Your excuse email will appear here...
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
